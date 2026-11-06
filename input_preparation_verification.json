@@ -1,0 +1,30 @@
+{
+  "release_checksums": {
+    "doi": "10.5281/zenodo.18459694",
+    "filename": "GFQA_v3.zip",
+    "bytes": 201278791,
+    "md5": "00f3ea19ce529753977eb3aeb08fbc47",
+    "sha256": "82b169dcbf5abf30066020b176b82474b23a2dec0a108a351045f31a6476e92a",
+    "data_license": "CC BY 4.0"
+  },
+  "metadata": {
+    "GEMStat_methods_metadata.csv": {
+      "rows": 2228,
+      "columns": 9,
+      "all_columns_strings_or_missing": true,
+      "working_counterpart": "not required or present in the original analysis"
+    },
+    "GEMStat_parameter_metadata.csv": {
+      "rows": 621,
+      "columns": 8,
+      "all_columns_strings_or_missing": true,
+      "all_values_equal_to_working_metadata": true
+    },
+    "GEMStat_station_metadata.csv": {
+      "rows": 22981,
+      "columns": 26,
+      "all_columns_strings_or_missing": true,
+      "all_values_equal_to_working_metadata": true
+    }
+  }
+}

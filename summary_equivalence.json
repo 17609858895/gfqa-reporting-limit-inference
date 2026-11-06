@@ -1,0 +1,38 @@
+{
+  "T_country_rule_prevalence.csv": {
+    "rows": 101,
+    "columns": [
+      "country",
+      "n",
+      "half",
+      "model",
+      "und",
+      "t"
+    ],
+    "all_keys_match": true,
+    "max_absolute_numeric_difference": {
+      "n": 0.0,
+      "half": 1.1102230246251565e-16,
+      "model": 1.1102230246251565e-16,
+      "und": 9.118140270603092e-17
+    },
+    "tolerance": 1e-12,
+    "pass": true
+  },
+  "T_robustness_variants.csv": {
+    "rows": 21,
+    "columns": [
+      "label",
+      "t",
+      "prev",
+      "fc"
+    ],
+    "all_keys_match": true,
+    "max_absolute_numeric_difference": {
+      "prev": 0.0,
+      "fc": 0.0
+    },
+    "tolerance": 1e-12,
+    "pass": true
+  }
+}
