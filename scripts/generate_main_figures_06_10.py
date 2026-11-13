@@ -1,4 +1,7 @@
-"""Compact main-paper probability, screening, transfer, trend and measurement figures.
+"""Panel builders for probability, screening, transfer, trend and measurement evidence.
+
+Since the six-figure consolidation these builders are imported by generate_six_main_figures.py;
+the SPEC below documents the former ten-figure layouts only.
 
 All values are read from completed analyses.  This file contains neutral panel
 builders and does not import former supplementary-figure modules.
@@ -8,6 +11,7 @@ from __future__ import annotations
 import argparse
 import matplotlib as mpl
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib.ticker import FixedLocator, FuncFormatter, MaxNLocator, NullLocator
 from matplotlib.transforms import ScaledTranslation
 import numpy as np
@@ -63,6 +67,31 @@ def above_legend(ax,pad=8,**kwargs):
                      borderaxespad=0,**kwargs)
 
 
+def standalone(ss):
+    return ss.get_gridspec().get_geometry()==(1,1)
+
+
+def shared_key(fig, ss, handles, columns):
+    """Put one legend in the space reserved below its related panels."""
+    box=ss.get_position(fig)
+    return fig.legend(handles=handles,loc='center',ncol=columns,frameon=False,
+                      bbox_to_anchor=(box.x0+box.width/2,box.y0+box.height/2),
+                      fontsize=12.5,handlelength=1.4,handletextpad=.35,
+                      columnspacing=1.0,borderaxespad=0,borderpad=0)
+
+
+def metal_keys():
+    return [Line2D([],[],marker=TMARK[t],ls='',mfc=TCOL[t],mec=INK,
+                   mew=.65,ms=7.5,label=t) for t in METALS]
+
+
+def triage_keys():
+    return [Patch(facecolor=colour,edgecolor=INK,linewidth=.6,label=label)
+            for colour,label in [(PAL[3],'Likely below threshold'),
+                                 (PAL[4],'Uncertain'),
+                                 (PAL[0],'Likely above threshold')]]
+
+
 def reliability(fig, ss):
     ax=fig.add_subplot(ss)
     ax.plot([0,1],[0,1],color=MUTED,ls='--',lw=1.1)
@@ -70,12 +99,13 @@ def reliability(fig, ss):
         g=REL[REL.target.eq(t)&REL.n.ge(150)]
         ax.plot(g.mean_post,g.obs,marker=TMARK[t],color=TCOL[t],mec=INK,mew=.65,
                 ms=6.8,lw=1.8,ls=':' if t in ['PFOS','Glyphosate'] else '-',label=LAB.get(t,t))
-    ax.set(xlim=(0,1),ylim=(0,1))
+    ax.set(xlim=(-.02,1.02),ylim=(-.02,1.02),xticks=np.linspace(0,1,6),yticks=np.linspace(0,1,6))
     style(ax,'Conditional exceedance probability','Observed exceedance fraction')
-    ax.legend(loc='lower right',ncol=2,fontsize=11.7,columnspacing=.65,handletextpad=.3,handlelength=1.5)
+    ax.legend(loc='lower right',ncol=2,fontsize=12,columnspacing=.55,
+              handletextpad=.3,handlelength=1.35,frameon=False)
 
 
-def recensor_triage(fig,ss):
+def recensor_triage(fig,ss,ncol=3,fontsize=12.5):
     ax=fig.add_subplot(ss)
     lc=PB.loc[TARGETS,'likely_compliant_share(<0.05)'].to_numpy()*100
     le=PB.loc[TARGETS,'likely_exceed_share(>0.5)'].to_numpy()*100
@@ -89,7 +119,7 @@ def recensor_triage(fig,ss):
     ax.text(102,-.7,'False below\nthreshold (%)',fontsize=11.1,color=INK,va='bottom')
     ax.set_yticks(y,[LAB.get(t,t) for t in TARGETS]);ax.invert_yaxis();ax.set_xlim(0,100)
     style(ax,'Re-censored events (%)',None)
-    below_legend(ax,ncol=2,fontsize=12.5,columnspacing=.7,handlelength=1.1,handletextpad=.4)
+    below_legend(ax,ncol=ncol,fontsize=fontsize,columnspacing=.7,handlelength=1.1,handletextpad=.4)
 
 
 def sensitivity(which):
@@ -102,21 +132,24 @@ def sensitivity(which):
             if which=='prev':
                 half=HID[HID.target.eq(t)&HID.variant.eq('main')].iloc[0].prev_half
                 ax.axvline(half*100,color=TCOL[t],ls=':',lw=1.4)
-        ax.set_yticks(range(len(VAR_LABELS)),[VAR_SHORT.get(v,v) for v in VAR_LABELS]);ax.invert_yaxis()
+        ax.set_yticks(range(len(VAR_LABELS)),[VAR_SHORT.get(v,v) for v in VAR_LABELS])
+        ax.set_ylim(len(VAR_LABELS)-.5,-.5)
         if which=='prev':
             ax.set_xlim(0,60);style(ax,'Exceedance prevalence (%)',None)
-            below_legend(ax,ncol=3,fontsize=12.5,handletextpad=.3,columnspacing=1.0)
         else:
             ax.axvline(5,color=MUTED,ls='--',lw=1.0)
             ax.set_xlim(0,6);style(ax,'False-below-threshold rate (%)',None)
+            if not standalone(ss):ax.tick_params(axis='y',labelleft=False)
+        if standalone(ss):
             below_legend(ax,ncol=3,fontsize=12.5,handletextpad=.3,columnspacing=1.0)
     return fn
 
 
 def layout6(fig):
-    g=fig.add_gridspec(2,2,left=.02,right=.98,bottom=.03,top=.97,hspace=.08,wspace=.07,
-                      height_ratios=[1,1.0],width_ratios=[1,1.06])
-    return dict(a=g[0,0],b=g[0,1],c=g[1,0],d=g[1,1])
+    g=fig.add_gridspec(4,12,left=.025,right=.975,bottom=.025,top=.97,
+                      hspace=.065,wspace=.22,height_ratios=[1,1.04,1,.07])
+    shared_key(fig,g[3,:],metal_keys(),3)
+    return dict(a=g[0,:],b=g[1,:],c=g[2,:7],d=g[2,7:])
 
 
 def prevalence_rows():
@@ -139,11 +172,19 @@ def prevalence_rows():
 DB=prevalence_rows()
 
 
-def rule_prevalence(fig,ss):
+def rule_keys():
+    return [Line2D([],[],color='#D9DDE2',lw=8.5,label='Interval-compatible range'),
+            Line2D([],[],marker='|',ls='',color=ROLE['ndc'],mew=2.3,ms=12,label='Lower bound'),
+            Line2D([],[],marker='|',ls='',color=ROLE['dl'],mew=2.3,ms=12,label='Upper bound'),
+            Line2D([],[],marker='s',ls='',mfc=ROLE['half'],mec=INK,mew=.65,ms=7.3,label='Half-limit'),
+            Line2D([],[],marker='o',ls='',mfc=ROLE['model'],mec=INK,mew=.65,ms=7.3,label='Censored model')]
+
+
+def rule_prevalence(fig,ss,legend=None):
     ax=fig.add_subplot(ss);y=np.arange(len(DB))
     ax.hlines(y,DB.ndc*100,DB.dl*100,color='#D9DDE2',lw=8.5,zorder=1,label='Interval-compatible range')
-    ax.scatter(DB.ndc*100,y,marker='|',s=135,color=ROLE['ndc'],lw=2.3,zorder=2,label='Non-detects below')
-    ax.scatter(DB.dl*100,y,marker='|',s=135,color=ROLE['dl'],lw=2.3,zorder=2,label='Full-limit')
+    ax.scatter(DB.ndc*100,y,marker='|',s=135,color=ROLE['ndc'],lw=2.3,zorder=2,label='Lower bound')
+    ax.scatter(DB.dl*100,y,marker='|',s=135,color=ROLE['dl'],lw=2.3,zorder=2,label='Upper bound')
     for key,col,label,mk in [('half',ROLE['half'],'Half-limit','s'),('model',ROLE['model'],'Censored model','o')]:
         error=np.vstack([(DB[key]-DB[key+'_lo']).fillna(0),(DB[key+'_hi']-DB[key]).fillna(0)])*100
         ax.errorbar(DB[key]*100,y,xerr=error,fmt=mk,color=col,mec=INK,mew=.65,ms=7.3,
@@ -152,7 +193,10 @@ def rule_prevalence(fig,ss):
     for i,r in DB.iterrows():ax.text(101.5,i,f'{r.und*100:.0f}%',va='center',fontsize=12,color=INK)
     ax.text(101.5,len(DB)-.15,'Blind\nspot',fontsize=11.5,va='bottom',color=INK)
     style(ax,'Exceedance prevalence (%)',None)
-    below_legend(ax,ncol=3,fontsize=12.5,handlelength=1.6,columnspacing=1.1,handletextpad=.5)
+    if legend is None: legend=standalone(ss)
+    if legend:
+        below_legend(ax,pad=40,handles=rule_keys(),ncol=3,fontsize=12,frameon=False,
+                     handlelength=1.4,columnspacing=.8,handletextpad=.4)
 
 
 def prevalence_ratio(fig,ss):
@@ -164,7 +208,7 @@ def prevalence_ratio(fig,ss):
     ax.yaxis.set_major_locator(FixedLocator([.5,1,2,5,10,20]));ax.yaxis.set_minor_locator(NullLocator())
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v,_:f'{v:g}×'))
     style(ax,'Blind-spot share (%)','Half-limit / model prevalence')
-    above_legend(ax,ncol=4,fontsize=12.5,columnspacing=.7,handletextpad=.25)
+    above_legend(ax,pad=3,ncol=4,fontsize=12,columnspacing=.55,handletextpad=.25)
 
 
 COUNTRY_NAMES={'Netherlands (-the )':'Netherlands','United States of America (the)':'United States of America',
@@ -176,10 +220,11 @@ def prevalence_maps(fig,ss):
     value=CTY[CTY.t.eq('Cd')].assign(NAME=lambda d:d.country.map(lambda s:COUNTRY_NAMES.get(s,s)))
     value['delta']=(value.half-value.model)*100
     countries=countries.merge(value[['NAME','delta']],on='NAME',how='inner')
-    g=ss.subgridspec(2,2,height_ratios=[1,.035],wspace=.05,hspace=.10)
+    g=ss.subgridspec(2,2,height_ratios=[1,.04],wspace=.035,hspace=.04)
     for k,(name,extent) in enumerate([('North America',(-128,-62,13,62)),('Europe',(-11,32,35,70))]):
         ax=fig.add_subplot(g[0,k]);basemap(ax,extent=extent,aspect=1.05)
         countries.plot(ax=ax,column='delta',cmap=SEQ_ROSE,vmin=0,vmax=80,edgecolor=INK,lw=.35,zorder=1)
+        ax.set_anchor('S')
         ax.set_xlabel('');ax.set_ylabel('');ax.set_xticks([]);ax.set_yticks([])
         for spine in ax.spines.values():spine.set(visible=True,color=MUTED,linewidth=.8)
         ax.text(0,1.025,name,transform=ax.transAxes,fontsize=13.1,color=INK,va='bottom')
@@ -191,9 +236,9 @@ def prevalence_maps(fig,ss):
 
 
 def layout7(fig):
-    g=fig.add_gridspec(2,2,left=.02,right=.98,bottom=.03,top=.97,hspace=.08,wspace=.07,
-                      height_ratios=[1.0,1],width_ratios=[1.05,1])
-    return dict(a=g[0,:],b=g[1,0],c=g[1,1])
+    g=fig.add_gridspec(3,1,left=.025,right=.975,bottom=.025,top=.975,
+                      hspace=.065,height_ratios=[4.15,3.55,6.95])
+    return dict(a=g[0],b=g[1],c=g[2])
 
 
 def bound_frontier(fig,ss):
@@ -206,14 +251,20 @@ def bound_frontier(fig,ss):
     ax.axvline(.9,color=INK,ls='--',lw=1)
     handles=[Line2D([],[],marker=markers[m],ls='',mfc='white',mec=INK,ms=7.5,label=labels[m]) for m in markers]
     handles += [Line2D([],[],marker='o',ls='',mfc=TCOL[t],mec=INK,ms=7.5,label=t) for t in METALS]
-    ax.legend(handles=handles,loc='lower center',bbox_to_anchor=(.5,1.015),ncol=3,fontsize=10.9,
-              handletextpad=.25,columnspacing=.55)
-    ax.set_xlim(.4,1.0);ax.set_ylim(-1,75)
-    style(ax,'Identified coverage lower bound','Upper bound ≤ threshold (%)')
+    ax.legend(handles=handles,loc='upper right',bbox_to_anchor=(.82,.99),ncol=2,
+              fontsize=12,frameon=False,handletextpad=.25,columnspacing=.55)
+    ax.set_xlim(.39,1.0);ax.set_ylim(-2,75)
+    ax.set_xticks(np.linspace(.4,1,7))
+    style(ax,'Identified coverage lower bound','Upper bound ≤ threshold\n(% of blind-spot events)')
 
 
 TRANSFER_MODELS=[('Sub-DL/2',ROLE['Substitution'],'o'),('XGB-AFT-N',ROLE['Censored'],'D'),
                  ('LGB-Tobit',ROLE['Censored'],'s'),('CSL',ROLE['Ensemble'],'^')]
+
+def transfer_keys():
+    return [Line2D([],[],marker=marker,ls='',mfc=colour,mec=INK,
+                   mew=.6,ms=7,label=model) for model,colour,marker in TRANSFER_MODELS]
+
 
 def country_transfer(metric):
     def fn(fig,ss):
@@ -229,19 +280,23 @@ def country_transfer(metric):
                 within=BENCH[BENCH.target.eq(t)&BENCH.model.eq('XGB-AFT-N')].iloc[0].cindex
                 ax.plot([i-.38,i+.38],[within,within],color=ROLE['Censored'],lw=2)
         ax.set_xticks(range(3),METALS)
+        ax.set_xlim(-.48,2.48)
         if metric=='cindex':
             ax.axhline(.5,color=MUTED,ls='--',lw=1);ax.set_ylim(.35,.95)
-            style(ax,None,'Interval C-index, unseen country')
+            style(ax,None,'Interval C-index\nin unseen country')
         else:
             ax.axhline(.9,color=INK,ls='--',lw=1);ax.set_ylim(.15,1.02)
-            style(ax,None,'Identified coverage lower bound')
-        below_legend(ax,pad=34,ncol=2,fontsize=12.5,columnspacing=.7,handletextpad=.25,handlelength=1.0)
+            style(ax,None,'Identified coverage\nlower bound')
+        if standalone(ss):
+            below_legend(ax,pad=34,ncol=2,fontsize=12.5,columnspacing=.7,handletextpad=.25,handlelength=1.0)
     return fn
 
 
 def layout8(fig):
-    g=fig.add_gridspec(1,3,left=.02,right=.98,bottom=.03,top=.97,wspace=.07,width_ratios=[1.2,1,1])
-    return dict(a=g[0,0],b=g[0,1],c=g[0,2])
+    g=fig.add_gridspec(4,1,left=.035,right=.975,bottom=.022,top=.97,
+                      hspace=.083,height_ratios=[1.14,1,1,.10])
+    shared_key(fig,g[3,0],transfer_keys(),4)
+    return dict(a=g[0,0],b=g[1,0],c=g[2,0])
 
 
 def trend_association(fig,ss):
@@ -277,18 +332,35 @@ def annual_series(target,country):
 SERIES={('Cd','France'):annual_series('Cd','France'),('Pb','Mexico'):annual_series('Pb','Mexico')}
 
 
-def trend_series(key):
-    def fn(fig,ss):
-        ax=fig.add_subplot(ss);g=SERIES[key]
-        ax.fill_between(g.index,0,g.und*100,color=ROLE['nd_undetermined'],alpha=.35,lw=0,label='Blind spot')
-        ax.plot(g.index,g.half*100,color=ROLE['half'],marker='s',ms=5.8,mec=INK,mew=.6,lw=2,label='Half-limit')
-        ax.plot(g.index,g.model*100,color=ROLE['model'],marker='o',ms=5.8,mec=INK,mew=.6,lw=2,label='Censored model')
-        ax.xaxis.set_major_locator(MaxNLocator(nbins=4,integer=True));ax.set_ylim(0,105)
-        ax.text(.04 if key[1]=='Mexico' else .96,.96,f'{key[0]}, {key[1]}',transform=ax.transAxes,
-                ha='left' if key[1]=='Mexico' else 'right',va='top',fontsize=13,color=INK)
-        style(ax,'Year','Share of events (%)')
-        below_legend(ax,ncol=2,fontsize=12.5,handlelength=1.25,columnspacing=.6,handletextpad=.3)
-    return fn
+def draw_annual_case(ax,key,year_label=None):
+    g=SERIES[key]
+    ax.fill_between(g.index,0,g.und*100,color=ROLE['nd_undetermined'],alpha=.35,lw=0,label='Blind spot')
+    ax.plot(g.index,g.half*100,color=ROLE['half'],marker='s',ms=5.8,mec=INK,mew=.6,lw=2,label='Half-limit')
+    ax.plot(g.index,g.model*100,color=ROLE['model'],marker='o',ms=5.8,mec=INK,mew=.6,lw=2,label='Censored model')
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=4,integer=True))
+    ax.set_ylim(-4,105)
+    ax.set_yticks([0,25,50,75,100])
+    x,alignment=(.04,'left') if key[1]=='Mexico' else (.96,'right')
+    ax.text(x,.96,f'{key[0]}, {key[1]}',transform=ax.transAxes,ha=alignment,va='top',fontsize=13,color=INK)
+    style(ax,year_label,None)
+
+
+def trend_cases(fig,ss):
+    group=ss.subgridspec(2,2,hspace=.18,wspace=.09,height_ratios=[1,.20])
+    france=fig.add_subplot(group[0,0])
+    mexico=fig.add_subplot(group[0,1],sharey=france)
+    draw_annual_case(france,('Cd','France'))
+    france.set_ylabel('Share of events (%)',fontsize=15,color=INK)
+    draw_annual_case(mexico,('Pb','Mexico'))
+    mexico.tick_params(axis='y',labelleft=False)
+    footer=fig.add_subplot(group[1,:])
+    footer.set_axis_off()
+    footer.text(.5,1,'Year',transform=footer.transAxes,ha='center',va='top',fontsize=15,color=INK)
+    key_transform=footer.transAxes+ScaledTranslation(0,-21/72,fig.dpi_scale_trans)
+    handles,labels=mexico.get_legend_handles_labels()
+    footer.legend(handles,labels,loc='upper center',bbox_to_anchor=(.5,1),bbox_transform=key_transform,
+                  ncol=3,fontsize=12.5,handlelength=1.25,columnspacing=.6,handletextpad=.3,
+                  borderaxespad=0)
 
 
 def trend_forest(fig,ss):
@@ -314,13 +386,13 @@ def year_removal(fig,ss):
     ax.text(.04,.92,f'r = {correlation:.3f}',transform=ax.transAxes,fontsize=12,color=INK)
     ax.set(xlim=limits,ylim=limits)
     style(ax,'Full-model trend difference\n(pp per decade)','Without year feature\n(pp per decade)')
-    ax.legend(loc='lower right',fontsize=12)
+    if standalone(ss):ax.legend(loc='lower right',fontsize=12)
 
 
 def layout9(fig):
-    g=fig.add_gridspec(2,3,left=.02,right=.98,bottom=.03,top=.97,wspace=.07,hspace=.08,
-                      height_ratios=[1,1.05])
-    return dict(a=g[0,0],b=g[0,1],c=g[0,2],d=g[1,:2],e=g[1,2])
+    g=fig.add_gridspec(3,20,left=.025,right=.975,bottom=.025,top=.975,
+                      wspace=.34,hspace=.065,height_ratios=[1.06,1,1])
+    return dict(a=g[0,:],b=g[1,:],c=g[2,:13],d=g[2,13:])
 
 
 station_map=(STATION_PRIORITY[STATION_PRIORITY.target.isin(METALS)].groupby('station')
@@ -331,15 +403,16 @@ MAP_MAX=float(np.quantile(station_map.e,.98))
 
 
 def followup_maps(fig,ss):
-    g=ss.subgridspec(3,1,height_ratios=[1,1,.035],hspace=.12)
+    g=ss.subgridspec(2,2,height_ratios=[1,.04],wspace=.035,hspace=.045)
     for k,(name,extent) in enumerate([('Mexico',(-117,-87,14.5,32.5)),('Europe',(-11,33,36,70))]):
-        ax=fig.add_subplot(g[k,0]);basemap(ax,extent=extent,aspect=1.5)
+        ax=fig.add_subplot(g[0,k]);basemap(ax,extent=extent,aspect=1.5)
+        ax.set_anchor('S')
         ax.scatter(station_map.x,station_map.y,c=station_map.e,cmap=SEQ_ROSE,vmin=0,vmax=MAP_MAX,
                    s=(6+4*np.sqrt(station_map.n))*1.1,ec=INK,lw=.28,zorder=3)
         for spine in ax.spines.values():spine.set(visible=True,color=MUTED,linewidth=.8)
         ax.text(0,1.025,name,transform=ax.transAxes,fontsize=13,color=INK,va='bottom')
-    cax=fig.add_subplot(g[2,0]);pos=cax.get_position()
-    cax.set_position([pos.x0+pos.width*.08,pos.y0,pos.width*.84,pos.height])
+    cax=fig.add_subplot(g[1,:]);pos=cax.get_position()
+    cax.set_position([pos.x0+pos.width*.20,pos.y0,pos.width*.60,pos.height])
     cb=fig.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(0,MAP_MAX),cmap=SEQ_ROSE),
                     cax=cax,orientation='horizontal',extend='max')
     cb.set_label('Expected hidden exceedances per station',fontsize=12.7)
@@ -362,7 +435,8 @@ def followup_triage(fig,ss):
     ax.text(101.5,-1.0,'Limit\nreduction',fontsize=10.7,color=INK,va='bottom')
     ax.set_yticks(y,[label for label,_ in rows]);ax.invert_yaxis();ax.set_xlim(0,100)
     style(ax,'Blind-spot events (%)',None,fs=13.5)
-    below_legend(ax,ncol=2,fontsize=12.5,handlelength=1.1,columnspacing=.7,handletextpad=.4)
+    below_legend(ax,handles=triage_keys(),ncol=2 if standalone(ss) else 3,
+                 fontsize=12.5,handlelength=1.1,columnspacing=.7,handletextpad=.4)
 
 
 def priority_concentration(fig,ss):
@@ -381,22 +455,22 @@ def priority_concentration(fig,ss):
 
 
 def layout10(fig):
-    g=fig.add_gridspec(2,2,left=.02,right=.98,bottom=.03,top=.97,hspace=.08,wspace=.07,
-                      height_ratios=[1.35,.9],width_ratios=[1.05,1.18])
-    return dict(a=g[:,0],b=g[0,1],c=g[1,1])
+    g=fig.add_gridspec(3,1,left=.025,right=.975,bottom=.025,top=.975,
+                      hspace=.065,height_ratios=[1.25,1.03,.95])
+    return dict(a=g[0],b=g[1],c=g[2])
 
 
 SPEC={
  6:dict(stem='Fig06_triage_sensitivity',panels=[('a',reliability),('b',recensor_triage),('c',sensitivity('prev')),('d',sensitivity('fc'))],
-        layout=layout6,size=(12.8,8.8),subs={'a':(6.1,4.7),'b':(7.1,4.7),'c':(6.6,4.6),'d':(6.6,4.6)}),
+        layout=layout6,size=(12.4,12.4),subs={'a':(6.1,4.7),'b':(7.1,4.7),'c':(6.6,4.6),'d':(6.6,4.6)}),
  7:dict(stem='Fig07_screening_prevalence',panels=[('a',rule_prevalence),('b',prevalence_ratio),('c',prevalence_maps)],
-        layout=layout7,size=(12.8,9.4),subs={'a':(9.5,6.3),'b':(6.5,5.0),'c':(8.5,4.3)}),
+        layout=layout7,size=(12.6,15.15),subs={'a':(9.5,6.3),'b':(6.5,5.0),'c':(8.5,4.3)}),
  8:dict(stem='Fig08_bounds_transfer',panels=[('a',bound_frontier),('b',country_transfer('cindex')),('c',country_transfer('cov_lower'))],
-        layout=layout8,size=(13.8,5.6),subs={'a':(6.7,5.0),'b':(6.0,4.9),'c':(6.0,4.9)}),
- 9:dict(stem='Fig09_reporting_trends',panels=[('a',trend_association),('b',trend_series(('Cd','France'))),('c',trend_series(('Pb','Mexico'))),('d',trend_forest),('e',year_removal)],
-        layout=layout9,size=(13.7,8.6),subs={'a':(6.3,4.9),'b':(6.0,4.7),'c':(6.0,4.7),'d':(9.0,5.2),'e':(6.1,4.9)}),
+        layout=layout8,size=(12.2,10.4),subs={'a':(6.7,5.0),'b':(6.0,4.9),'c':(6.0,4.9)}),
+ 9:dict(stem='Fig09_reporting_trends',panels=[('a',trend_association),('b',trend_cases),('c',trend_forest),('d',year_removal)],
+        layout=layout9,size=(12.8,13.6),subs={'a':(6.3,4.9),'b':(11.0,4.4),'c':(9.0,5.2),'d':(6.1,4.9)}),
  10:dict(stem='Fig10_measurement_priorities',panels=[('a',followup_maps),('b',followup_triage),('c',priority_concentration)],
-         layout=layout10,size=(12.8,9.2),subs={'a':(7.0,9.2),'b':(7.5,6.5),'c':(6.2,5.0)})
+         layout=layout10,size=(12.6,13.65),subs={'a':(9.2,4.7),'b':(7.5,6.5),'c':(6.2,5.0)})
 }
 
 if __name__=='__main__':

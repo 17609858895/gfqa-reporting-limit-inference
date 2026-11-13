@@ -55,38 +55,40 @@ def size_of(n):
 
 def _pts(ax, scale=1.0):
     ax.scatter(smap["x"], smap["y"], c=smap["und"] * 100, cmap=SEQ_LAV, vmin=0, vmax=100, s=size_of(smap["n"]) * scale,
-               edgecolors=INK, linewidths=0.3, zorder=3)
+               edgecolors=INK, linewidths=0.23, zorder=3)
 
 
 def panel_a(fig, ss):
-    g = ss.subgridspec(1, 2, width_ratios=[4.1, 1], wspace=0.06)
+    g = ss.subgridspec(2, 1, height_ratios=[2.10, 1], hspace=0.12)
     ax = fig.add_subplot(g[0])
     basemap(ax)
     _pts(ax)
     zooms = [("Europe", (-11, 33, 36, 70)), ("Mexico", (-117, -87, 14.5, 32.5)), ("Southern Canada", (-125, -62, 43, 58))]
-    zg = g[1].subgridspec(3, 1, hspace=0.28)
+    zg = g[1].subgridspec(1, 3, wspace=0.045)
     for k, (name, ext) in enumerate(zooms):
         z = fig.add_subplot(zg[k])
         basemap(z, extent=ext)
-        _pts(z, 1.2)
+        _pts(z)
         zoom_box(ax, z, ext, name)
-    cax = ax.inset_axes([0.05, 0.11, 0.20, 0.035])
+    cax = ax.inset_axes([0.046, 0.105, 0.21, 0.030])
     import matplotlib as mpl
     cb = fig.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(0, 100), cmap=SEQ_LAV), cax=cax, orientation="horizontal")
-    cb.set_label("Blind-spot share (%)", fontsize=13.0)
+    cb.set_ticks([0, 25, 50, 75, 100])
+    cb.set_label("Blind-spot share (%)", fontsize=12.5)
     cb.ax.tick_params(labelsize=11, length=3)
     cb.outline.set_edgecolor(INK)
-    for n, yy in zip([10, 100, 1000], [0.50, 0.42, 0.33]):
-        ax.scatter([0.05], [yy], s=size_of(n), transform=ax.transAxes, facecolors="white", edgecolors=INK, lw=0.7)
-        ax.text(0.075, yy, f"{n:,} events", transform=ax.transAxes, va="center", fontsize=13.0, color=INK)
+    ax.text(0.046, 0.36, "Events per station", transform=ax.transAxes, fontsize=12.5, color=INK)
+    for n, xx in zip([10, 100, 1000], [0.064, 0.15, 0.238]):
+        ax.scatter([xx], [0.286], s=size_of(n), transform=ax.transAxes, facecolors="white", edgecolors=INK, lw=0.7)
+        ax.text(xx, 0.223, f"{n:,}", transform=ax.transAxes, ha="center", va="center", fontsize=11.5, color=INK)
     ax.text(0.98, 0.03, f"{len(smap):,} stations, {smap['country'].nunique()} countries", transform=ax.transAxes,
             ha="right", va="bottom", fontsize=13.0, color=INK)
 
 
-def panel_b(fig, ss):
+def panel_b(fig, ss, legend_ncol=None):
     ax = fig.add_subplot(ss)
-    order = [("a", "Detected, ≤ standard", ROLE["detected_ok"]), ("b", "Detected, > standard", ROLE["detected_exceed"]),
-             ("c", "Non-detect, DL ≤ standard", ROLE["nd_determinable"]), ("d", "Non-detect, DL > standard", ROLE["nd_undetermined"])]
+    order = [("a", "Detected ≤ threshold", ROLE["detected_ok"]), ("b", "Detected > threshold", ROLE["detected_exceed"]),
+             ("c", "Non-detect, DL ≤ threshold", ROLE["nd_determinable"]), ("d", "Non-detect, DL > threshold", ROLE["nd_undetermined"])]
     y = np.arange(len(cats))
     left = np.zeros(len(cats))
     for k, lab, col in order:
@@ -99,10 +101,12 @@ def panel_b(fig, ss):
     ax.set_yticks(y, [LABEL.get(t, t) for t in cats.index])
     ax.set_xlim(0, 100)
     style(ax, "Share of events (%)")
-    outside_legend(ax,pad_pt=48,ncol=2,fontsize=12.5,columnspacing=.8,handlelength=1.1,frameon=False)
+    single_panel = ss.get_gridspec().get_geometry() == (1, 1)
+    outside_legend(ax, pad_pt=39, ncol=legend_ncol or (2 if single_panel else 4), fontsize=11.7,
+                   columnspacing=.95, handlelength=1.05, frameon=False)
 
 
-def panel_c(fig, ss):
+def panel_c(fig, ss, legend_ncol=None, count_y=None):
     ax = fig.add_subplot(ss)
     cols = {"Metals": PAL[0], "Organic micropollutants": PAL[1], "Nutrients": PAL[2], "Other": PAL[6]}
     for k in ["Other", "Nutrients", "Metals", "Organic micropollutants"]:
@@ -112,8 +116,12 @@ def panel_c(fig, ss):
     ax.set_yscale("log")
     ax.set_xlim(-3, 103)
     style(ax, "Non-detect share (%)", "Distinct reporting limits")
-    ax.legend(loc="upper right", fontsize=12.0, handletextpad=0.2, markerscale=0.8, borderaxespad=0.1, frameon=False)
-    ax.text(0.98, 0.04, f"{len(prof)} parameters", transform=ax.transAxes, ha="right", fontsize=12.5, color=INK)
+    ax.tick_params(axis="y", which="minor", length=0)
+    standalone = ss.get_gridspec().get_geometry() == (1, 1)
+    ax.legend(loc="upper right", fontsize=11.5, handletextpad=0.2, markerscale=0.8, borderaxespad=0.2,
+              ncol=legend_ncol or (1 if standalone else 4), columnspacing=0.8, frameon=False)
+    ax.text(0.98, count_y or (0.70 if standalone else 0.83), f"{len(prof)} parameters", transform=ax.transAxes, ha="right",
+            fontsize=12.0, color=INK)
 
 
 def panel_d(fig, ss):
@@ -135,10 +143,10 @@ def panel_d(fig, ss):
                 transform=ax.get_xaxis_transform())
     ax.axhline(0, color=INK, ls="--", lw=1.1)
     ax.axhline(np.log10(0.3), color=MUTED, ls=":", lw=1.3)
-    ax.set_xticks(range(len(order)), order, rotation=30, ha="right")
+    ax.set_xticks(range(len(order)), order)
     ax.set_yticks([-2, -1, 0, 1, 2, 3], ["0.01", "0.1", "1", "10", "100", "1000"])
     ax.set_ylim(-2.6, 3.6)
-    style(ax, None, "DL / standard (non-detects)")
+    style(ax, None, "DL / threshold (non-detects)")
 
 
 def panel_e(fig, ss):
@@ -151,7 +159,7 @@ def panel_e(fig, ss):
     ax.annotate("", xy=(44, 4), xytext=(2, 4), arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.4))
     ax.text(23, 1.0, "log concentration", ha="center", fontsize=13.0, color=INK)
     ax.plot([28, 28], [3, 27], color=PAL[0], lw=2.2)
-    ax.text(28, 28.2, "standard", ha="center", fontsize=13.0, color=darker_txt(PAL[0]))
+    ax.text(28, 28.2, "Threshold T", ha="center", fontsize=12.5, color=INK)
     rows = [(23, "Detected", 18, None, ROLE["detected_ok"], "below threshold"),
             (18, "Detected", 36, None, ROLE["detected_exceed"], "above threshold"),
             (13, "Non-detect", None, 20, ROLE["nd_determinable"], "below threshold"),
@@ -167,21 +175,15 @@ def panel_e(fig, ss):
             ax.text(dl + 0.8, y + 1.6, "DL", fontsize=11.5, color=INK)
         ax.text(50, y, out, ha="right", va="center", fontsize=13.0, color=INK, style="italic" if out == "blind spot" else "normal")
     # rules table for the blind-spot event
-    x0 = 52
-    ax.text(x0, 26.5, "Rules applied to a blind-spot non-detect", fontsize=13.5, color=INK)
-    rules = [("Non-detect = below threshold", "below threshold", ROLE["ndc"]),
-             ("Half-limit substitution", "DL/2 > threshold?", ROLE["half"]),
-             ("DL rule", "above threshold", ROLE["dl"]),
-             ("Censored model", "P(Y > standard | Y < DL, x)", ROLE["model"])]
+    x0 = 53
+    ax.text(x0, 26.9, "Blind-spot reporting rules", fontsize=12.5, color=INK)
+    rules = [("Assume below threshold", "below threshold", ROLE["ndc"]),
+             ("Half-limit substitution", "DL/2 > T?", ROLE["half"]),
+             ("Full-limit substitution", "above threshold", ROLE["dl"]),
+             ("Censored model", "P(Y > T | Y < DL, x)", ROLE["model"])]
     for k, (name, res, col) in enumerate(rules):
         yy = 21.5 - k * 5
-        ax.add_patch(FancyBboxPatch((x0, yy - 1.8), 46, 3.6, boxstyle="round,pad=0.2,rounding_size=0.9",
-                                    facecolor=col, edgecolor=INK, lw=0.8, alpha=0.85))
-        ax.text(x0 + 1.2, yy, name, va="center", fontsize=13.0, color=INK)
-        ax.text(x0 + 44.8, yy, res, va="center", ha="right", fontsize=13.0, color=INK)
-
-
-def darker_txt(c):
-    from figkit_compact import darker
-    return darker(c, 0.55)
+        ax.scatter(x0 + 0.7, yy, s=68, marker="s", color=col, edgecolor=INK, linewidth=0.6)
+        ax.text(x0 + 2.7, yy, name, va="center", fontsize=12.5, color=INK)
+        ax.text(98.1, yy, res, va="center", ha="right", fontsize=12.5, color=INK)
 

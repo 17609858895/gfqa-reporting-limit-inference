@@ -35,9 +35,11 @@ STAGES = {
         ('s14_prevalence_ci.py',),
         ('s15_distribution_sensitivity.py', 'Cd', 'Pb', 'Hg'),
         ('s16_retest_priority.py',),
+        ('s18_annual_compliance.py',),
+        ('s18_annual_compliance.py', '--ci'),
     ],
     'summaries': [('s10_summarize.py',), ('assemble_figure_inputs.py',)],
-    'figures': [('generate_ten_main_figures.py',)],
+    'figures': [('generate_six_main_figures.py',)],
 }
 
 

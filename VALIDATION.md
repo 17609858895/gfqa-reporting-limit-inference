@@ -1,5 +1,14 @@
 # Release preparation checks
 
+## v1.1.0 (14 November 2026)
+
+- The plotting source was synchronised with the six-figure manuscript and `s18_annual_compliance.py` was added. Only the documented portability changes differ from the working copies: local helper imports, `inputs/basemap/`, `figures/qa/` and `assets/monitoring_vignette.png` paths, and neutral module docstrings.
+- The six combined figures, their 37 independent panels and `s18` outputs were regenerated in the working analysis project from its existing analytical outputs; no learner was refitted. The release copy itself was checked statically: AST parsing, in-memory compilation, closed import graph, inventory hashes and text scans for credentials, email addresses and user-specific paths. The serial runner's plan mode lists the updated stages.
+- Executed from this release copy against the existing analytical outputs (linked locally, not included), the figure stage reproduced all 6 combined figures and 37 independent panels pixel-identically to the manuscript figures.
+- The vignette was re-encoded with exact pixel identity and no ancillary metadata.
+
+## v1.0.0 (7 November 2026)
+
 Checks completed on 7 November 2026 using the recorded Python environment.
 
 - All 40 Python files pass AST parsing and in-memory compilation. Static import closure is complete using the included local helpers and declared third-party dependencies. Analysis and plotting entry points were not imported to discover dependencies.

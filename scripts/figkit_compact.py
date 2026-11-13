@@ -1,4 +1,10 @@
-"""Compact plotting and independent-panel export utilities for the GFQA study."""
+"""Compact figure kit for the six-figure GFQA manuscript.
+
+Composition uses a Robinson basemap with regional zooms, mixed panel types, a schematic strip and
+the nature_new palette. Every panel is a
+function fn(fig, subplotspec) so that the combined figure and each standalone subfigure are
+rendered by the same code on their own canvases.
+"""
 from __future__ import annotations
 
 import os
@@ -12,12 +18,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
-from ml_publication_style import configure_publication_style, style_axis, numeric_ticks, export_subfigures, save_figure_with_subfigures  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ml_publication_style import configure_publication_style, style_axis, numeric_ticks  # noqa: E402
 from scientific_palettes import STYLE_COLORS, get_palette  # noqa: E402
 
-# Geographic dependencies are available in the project interpreter; avoid an external project path.
 ROOT = Path(__file__).resolve().parents[1]
 FIG_ROOT = Path(os.environ.get("GFQA_FIGURE_ROOT", str(ROOT / "figures")))
+FIG_QA_ROOT = Path(os.environ.get("GFQA_FIGURE_QA_ROOT", str(ROOT / "figures/qa")))
 BASEMAP = ROOT / "inputs" / "basemap"
 INK, MUTED, LIGHT = STYLE_COLORS["ink"], STYLE_COLORS["muted"], STYLE_COLORS["light"]
 PAL = get_palette("nature_new")  # rose, blue, light green, teal, lavender, pink, gold, purple
@@ -40,23 +47,22 @@ def setup():
     configure_publication_style()
     plt.rcParams.update({"font.family": "sans-serif", "font.sans-serif": ["Arial", "DejaVu Sans"],
                          "font.size": FS, "axes.labelsize": FS, "axes.labelweight": "normal",
-                         "xtick.labelsize": FS, "ytick.labelsize": FS, "legend.fontsize": 13,
-                         "axes.labelpad": 6, "xtick.major.pad": 4, "ytick.major.pad": 4, "axes.linewidth": 1.3,
+                         "xtick.labelsize": 12.5, "ytick.labelsize": 12.5, "legend.fontsize": 11.5,
+                         "axes.labelpad": 5, "xtick.major.pad": 3.5, "ytick.major.pad": 3.5, "axes.linewidth": 1.3,
                          "xtick.major.width": 1.2, "ytick.major.width": 1.2, "xtick.major.size": 5.5,
                          "ytick.major.size": 5.5})
 
 
 def style(ax, xlabel=None, ylabel=None, fs=FS):
-    style_axis(ax, tick_size=fs, label_size=fs)
+    tick_size = max(10.5, fs - 2.5)
+    style_axis(ax, tick_size=tick_size, label_size=fs)
     ax.grid(False)
     for s in ["top", "right"]:
         ax.spines[s].set_visible(False)
     for s in ["left", "bottom"]:
         ax.spines[s].set_color(INK)
         ax.spines[s].set_linewidth(1.3)
-    ax.tick_params(axis="both", which="major", colors=INK, width=1.2, length=5.5, labelsize=fs, direction="out")
-    for lab in ax.get_xticklabels() + ax.get_yticklabels():
-        lab.set_fontweight("normal")
+    ax.tick_params(axis="both", which="major", colors=INK, width=1.2, length=5.5, labelsize=tick_size, direction="out")
     ax.xaxis.label.set_fontweight("normal")
     ax.yaxis.label.set_fontweight("normal")
     from matplotlib.ticker import AutoLocator
@@ -241,13 +247,7 @@ def _fit_cells(fig, groups, specs, exempt=()):
     This adapts the current reference project's live outer-bbox layout principle.
     Raster schematics keep their aspect ratio; quantitative panels retain all labels.
     """
-    from matplotlib.text import Text
     fig.canvas.draw()
-    for txt in fig.findobj(Text):
-        if txt.get_text():
-            txt.set_fontsize(max(12.5,txt.get_fontsize()))
-            txt.set_fontweight('normal')
-            txt.set_color(INK)
     report=[]
     for key,axes in groups.items():
         if key in exempt: continue
@@ -300,39 +300,73 @@ def _gap_metrics(fig, groups, specs):
     return {'figsize_inches':[float(width),float(height)],'panel_bounds':{k:list(map(float,b.extents)) for k,b in boxes.items()},'gaps':gaps}
 
 
-def build(panels, layout_fn, folder, stem, figsize, sub_sizes=None, letter_size=18):
+def _apply_tick_weight(fig):
+    for ax in fig.axes:
+        if not ax.axison:
+            continue
+        for axis in (ax.xaxis, ax.yaxis):
+            for label in axis.get_majorticklabels():
+                label.set_fontweight('bold')
+                label.set_color(INK)
+
+
+def _save_pair(fig, destination, dpi=600):
+    options = dict(bbox_inches='tight', pad_inches=0.07, facecolor='white')
+    fig.savefig(destination.with_suffix('.png'), dpi=dpi, metadata={'Software':'Matplotlib'}, **options)
+    fig.savefig(destination.with_suffix('.pdf'), dpi=dpi, metadata={'Creator':'Scientific figure export','Author':'CHONG LIU'}, **options)
+
+
+def export_subfigures(panels, out, stem, sub_sizes=None):
+    """Adapt the skill exporter to re-render each complete panel on a standalone canvas."""
+    subdir = out/'subfigures'
+    subdir.mkdir(parents=True, exist_ok=True)
+    lines = ['# Subfigures', '', 'Each panel is re-rendered independently by its shared panel builder.', '']
+    audit = {}
+    for letter, fn in panels:
+        size = (sub_sizes or {}).get(letter, (6.2, 4.8))
+        fig = plt.figure(figsize=size)
+        fn(fig, fig.add_gridspec(1, 1)[0])
+        _apply_tick_weight(fig)
+        fig.canvas.draw()
+        audit[letter] = _palette_audit(fig)
+        _save_pair(fig, subdir/f'{stem}_{letter}')
+        plt.close(fig)
+        lines.append(f'- {letter}: `{stem}_{letter}.png`, `{stem}_{letter}.pdf`')
+    (subdir/'README.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
+    return audit
+
+
+def save_figure_with_subfigures(fig, panels, out, stem, sub_sizes=None):
+    """Save the combined figure and independent PNG/PDF panels from the same builders."""
+    out.mkdir(parents=True, exist_ok=True)
+    _save_pair(fig, out/stem)
+    plt.close(fig)
+    return export_subfigures(panels, out, stem, sub_sizes)
+
+
+def build(panels, layout_fn, folder, stem, figsize, sub_sizes=None, letter_size=16, exempt=None, after_fit=None):
     import json
     setup()
     out=FIG_ROOT/folder
-    (out/'subfigures').mkdir(parents=True,exist_ok=True)
     fig=plt.figure(figsize=figsize)
     specs=layout_fn(fig); groups={}
     for letter,fn in panels:
         before=set(fig.axes); fn(fig,specs[letter]); groups[letter]=[a for a in fig.axes if a not in before]
+    _apply_tick_weight(fig)
     # The conceptual strips and the generated workflow retain their intentional pictorial composition.
-    exempt=('c',) if stem=='Fig02_reporting_resolution' else ('a',) if stem=='Fig03_learning_framework' else ()
+    if exempt is None:
+        exempt=('c',) if stem=='Fig02_reporting_resolution' else ('a',) if stem=='Fig03_learning_framework' else ()
     cell_fit=_fit_cells(fig,groups,specs,exempt)
     alignment=_calibrate(fig,groups,specs,exempt)
+    if after_fit is not None:
+        after_fit(fig,groups)
     gap_metrics=_gap_metrics(fig,groups,specs)
     for letter,_ in panels:
         bb=_bounds(fig,groups[letter])
-        fig.text(bb.x0-0.004,bb.y1+0.004,letter,fontsize=letter_size,ha='left',va='bottom',color=INK)
+        fig.text(bb.x0,bb.y1+0.002,letter,fontsize=letter_size,ha='left',va='bottom',color=INK)
     audit=_palette_audit(fig)
-    fig.savefig(out/f'{stem}.png',dpi=600,bbox_inches='tight',facecolor='white',metadata={'Software':'Matplotlib'})
-    fig.savefig(out/f'{stem}.pdf',bbox_inches='tight',facecolor='white',metadata={'Creator':'Scientific figure export','Author':''})
-    plt.close(fig)
-    lines=['# Subfigures','','Each panel is re-rendered on its own canvas by the same panel function (not cropped).','']
-    for letter,fn in panels:
-        size=(sub_sizes or {}).get(letter,(6.2,4.8))
-        f=plt.figure(figsize=size); fn(f,f.add_gridspec(1,1)[0]); f.canvas.draw()
-        from matplotlib.text import Text
-        for txt in f.findobj(Text):
-            if txt.get_text(): txt.set_fontsize(max(12.5,txt.get_fontsize())); txt.set_fontweight('normal'); txt.set_color(INK)
-        f.savefig(out/'subfigures'/f'{stem}_{letter}.png',dpi=600,bbox_inches='tight',facecolor='white',metadata={'Software':'Matplotlib'})
-        f.savefig(out/'subfigures'/f'{stem}_{letter}.pdf',bbox_inches='tight',facecolor='white',metadata={'Creator':'Scientific figure export','Author':''})
-        plt.close(f)
-        lines.append(f'- {letter}: `{stem}_{letter}.png`, `{stem}_{letter}.pdf`')
-    (out/'subfigures'/'README.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
-    qa=ROOT/'notes/qa/ten_figures'; qa.mkdir(parents=True,exist_ok=True)
-    (qa/f'{stem}_export_audit.json').write_text(json.dumps({'alignment':alignment,'cell_fit':cell_fit,'palette':audit,'layout':gap_metrics},indent=2),encoding='utf-8')
+    sub_audit=save_figure_with_subfigures(fig,panels,out,stem,sub_sizes)
+    FIG_QA_ROOT.mkdir(parents=True,exist_ok=True)
+    report={'alignment':alignment,'cell_fit':cell_fit,'palette':audit,'subfigure_palettes':sub_audit,'layout':gap_metrics}
+    (FIG_QA_ROOT/f'{stem}_export_audit.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     return out

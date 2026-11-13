@@ -37,7 +37,7 @@ def main():
         rel = path.relative_to(ROOT).as_posix()
         if path.name == '.gitignore':
             pass
-        elif rel == 'assets/method_background.png':
+        elif rel == 'assets/monitoring_vignette.png':
             pass
         elif path.suffix not in ALLOWED_SUFFIXES:
             problems.append(f'Unexpected file type: {rel}')
