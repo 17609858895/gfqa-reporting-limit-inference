@@ -197,6 +197,41 @@ def annual_compliance(fig, ss):
                           columnspacing=.8, handletextpad=.4)
 
 
+GAP_TARGETS = ['Cd', 'CdDis', 'PFOS', 'Hg', 'Pb', 'Glyphosate', 'Ni']
+GAP_LABELS = ['Cd', 'Cd\n(dissolved)', 'PFOS', 'Hg', 'Pb', 'Glyphosate', 'Ni']
+GAP = (g610.CTY.assign(d=lambda x: (x['half'] - x['model']) * 100)
+       .pivot(index='country', columns='t', values='d').reindex(index=CM.index, columns=GAP_TARGETS))
+
+
+def country_prevalence_gap(fig, ss):
+    """Half-limit minus model prevalence by country and contaminant, rows ordered as in Fig. 1c."""
+    g = ss.subgridspec(2, 1, height_ratios=[1, .032], hspace=.075)
+    ax = fig.add_subplot(g[0])
+    cmap = SEQ_ROSE.copy()
+    cmap.set_bad('#EEF0F2')
+    values = GAP.to_numpy()
+    ax.imshow(np.ma.masked_invalid(np.clip(values, 0, None)), cmap=cmap, vmin=0, vmax=80, aspect='auto')
+    for (i, j), v in np.ndenumerate(values):
+        if np.isfinite(v):
+            ax.text(j, i, '0' if round(v) == 0 else f'{v:.0f}', ha='center', va='center', fontsize=10.3, color=INK)
+    ax.set_xticks(range(len(GAP_TARGETS)), GAP_LABELS)
+    ax.set_yticks(range(len(GAP)), [short_country(c) for c in GAP.index])
+    style(ax)
+    ax.xaxis.tick_top()
+    ax.tick_params(axis='both', length=0, labelsize=11.2)
+    ax.tick_params(axis='x', labelsize=11.5, top=True, labeltop=True, bottom=False, labelbottom=False)
+    for s_ in ax.spines.values():
+        s_.set_visible(False)
+    cax = fig.add_subplot(g[1])
+    pos = cax.get_position()
+    cax.set_position([pos.x0 + pos.width * .2, pos.y0, pos.width * .6, pos.height])
+    cb = fig.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(0, 80), cmap=SEQ_ROSE), cax=cax,
+                      orientation='horizontal', extend='max', ticks=[0, 20, 40, 60, 80])
+    cb.set_label('Half-limit minus model prevalence (pp)', fontsize=12.5)
+    cb.ax.tick_params(labelsize=11, length=3)
+    cb.outline.set_edgecolor(INK)
+
+
 def layout4(fig):
     g = fig.add_gridspec(5, 20, height_ratios=[5.1, .3, 4.55, 4.3, .26], left=.02, right=.98, bottom=.012, top=.985,
                          hspace=.085, wspace=.55)
@@ -256,10 +291,47 @@ def limit_histories(fig, ss):
     foot.text(.5, -.2, 'Year', transform=foot.transAxes, ha='center', va='top', fontsize=13.5, color=INK)
 
 
+TREND_SIGN_MIN = 1.0  # pp per decade; smaller slopes are treated as sign-indeterminate
+
+
+def opposite_trend_signs():
+    M = g610.MAIN
+    return M[(np.sign(M.r_half) != np.sign(M.r_model)) & M.r_half.abs().ge(TREND_SIGN_MIN)
+             & M.r_model.abs().ge(TREND_SIGN_MIN)]
+
+
+def trend_pairs(fig, ss):
+    """Half-limit against model-based within-station trends; shaded quadrants mark opposite signs."""
+    ax = fig.add_subplot(ss)
+    M = g610.MAIN
+    x0, x1 = M.r_model.min() - 3, M.r_model.max() + 3
+    y0, y1 = M.r_half.min() - 8, M.r_half.max() + 10
+    ax.fill_between([0, x1], y0, 0, color=ROLE['nd_undetermined'], alpha=.2, lw=0, zorder=0)
+    ax.fill_between([x0, 0], 0, y1, color=ROLE['nd_undetermined'], alpha=.2, lw=0, zorder=0)
+    lo, hi = max(x0, y0), min(x1, y1)
+    ax.plot([lo, hi], [lo, hi], color=MUTED, ls='--', lw=1)
+    ax.axhline(0, color=INK, lw=.8)
+    ax.axvline(0, color=INK, lw=.8)
+    for t, g in M.groupby('target'):
+        ax.scatter(g.r_model, g.r_half, marker=TMARK[t], s=58, color=TCOL[t], ec=INK, lw=.65, label=t, zorder=3)
+    offsets = {('Cd', 'France'): (-12, 6, 'right'), ('Pb', 'Mexico'): (-10, 10, 'right'),
+               ('Cd', 'Italy'): (14, -4, 'left'), ('Hg', 'Mexico'): (10, -12, 'left'),
+               ('Cd', 'Belgium'): (-12, 6, 'right')}
+    for (t, c), (dx, dy, ha) in offsets.items():
+        r = M[M.target.eq(t) & M.country.eq(c)].iloc[0]
+        ax.annotate(f'{t} {SHORT(c)}', (r.r_model, r.r_half), xytext=(dx, dy), textcoords='offset points',
+                    ha=ha, va='center', fontsize=10.9, color=INK, arrowprops=dict(arrowstyle='-', color=MUTED, lw=.7))
+    ax.text(.03, .04, f'Opposite signs: {len(opposite_trend_signs())} of {len(M)}', transform=ax.transAxes,
+            ha='left', fontsize=12, color=INK)
+    ax.set(xlim=(x0, x1), ylim=(y0, y1))
+    style(ax, 'Model trend (pp per decade)', 'Half-limit trend (pp per decade)')
+    ax.legend(loc='upper left', fontsize=12, handletextpad=.3, borderaxespad=.3)
+
+
 def layout5(fig):
-    g = fig.add_gridspec(3, 20, height_ratios=[4.95, 2.85, 4.45], left=.02, right=.98, bottom=.012, top=.985,
-                         hspace=.09, wspace=.55)
-    return dict(a=g[0, :10], b=g[0, 10:], c=g[1, :], d=g[2, :12], e=g[2, 12:])
+    g = fig.add_gridspec(3, 20, height_ratios=[4.6, 2.85, 4.45], left=.02, right=.98, bottom=.012, top=.985,
+                         hspace=.09, wspace=.6)
+    return dict(a=g[0, :6], b=g[0, 6:13], c=g[0, 13:], d=g[1, :], e=g[2, :12], f=g[2, 12:])
 
 
 # ------------------------------------------------------------------ Figure 6, new panels
@@ -300,8 +372,29 @@ def country_volume(fig, ss):
                       handletextpad=.35, columnspacing=.7)
 
 
+def _random_capture(draws=200, seed=0):
+    """Capture curves for random station orderings: pooled 95% envelope and mean median across metals."""
+    rng = np.random.default_rng(seed)
+    grid = np.linspace(0, 1, 201)
+    lows, highs, medians = [], [], []
+    for t in METALS:
+        v = g610.STATION_PRIORITY[g610.STATION_PRIORITY.target.eq(t)].expected_hidden_exceedances.to_numpy()
+        frac = np.arange(1, len(v) + 1) / len(v)
+        curves = np.array([np.interp(grid, frac, np.cumsum(rng.permutation(v)) / v.sum(), left=0)
+                           for _ in range(draws)])
+        lows.append(np.percentile(curves, 2.5, axis=0))
+        highs.append(np.percentile(curves, 97.5, axis=0))
+        medians.append(np.median(curves, axis=0))
+    return grid, np.min(lows, axis=0), np.max(highs, axis=0), np.mean(medians, axis=0)
+
+
+RANDOM_CAPTURE = _random_capture()
+
+
 def priority_capture(fig, ss):
     ax = fig.add_subplot(ss)
+    grid, low, high, median = RANDOM_CAPTURE
+    ax.fill_between(grid * 100, low * 100, high * 100, color='#D9DDE2', lw=0, zorder=0)
     for t in METALS:
         s = g610.STATION_PRIORITY[g610.STATION_PRIORITY.target.eq(t)]
         total = s.expected_hidden_exceedances.sum()
@@ -313,12 +406,52 @@ def priority_capture(fig, ss):
             if ls == '-':
                 index = np.searchsorted(fraction, .2)
                 ax.scatter([20], [cum[index] * 100], marker=TMARK[t], s=58, color=TCOL[t], ec=INK, lw=.7, zorder=3)
-    ax.plot([0, 100], [0, 100], color=MUTED, ls='--', lw=1)
     ax.set(xlim=(0, 100), ylim=(0, 100))
     style(ax, 'Stations targeted, ranked (%)', 'Expected hidden exceedances\ncaptured (%)')
+    from matplotlib.patches import Patch
     handles = g610.metal_keys() + [Line2D([], [], color=INK, lw=2.0, label='Posterior sum'),
-                                  Line2D([], [], color=INK, lw=1.5, ls=':', label='Uncertain-event count')]
-    ax.legend(handles=handles, loc='lower right', fontsize=11.6, frameon=False, ncol=1, handlelength=1.6)
+                                  Line2D([], [], color=INK, lw=1.5, ls=':', label='Uncertain-event count'),
+                                  Patch(facecolor='#D9DDE2', label='Random, 95% range')]
+    ax.legend(handles=handles, loc='lower right', bbox_to_anchor=(1.02, -.01), fontsize=10.8, frameon=False, ncol=2,
+              handlelength=1.5, columnspacing=.8, handletextpad=.4, borderaxespad=0)
+
+
+def _resolution():
+    """Share of blind-spot events, and of their expected hidden exceedances, resolved by a k-fold lower limit."""
+    out = {}
+    k = np.geomspace(1, 200, 240)
+    for t in METALS:
+        d = pd.read_parquet(RES / f'crossfit_{t}.parquet', columns=['undetermined', 'y_hi', 'post_exceed'])
+        b = d[d['undetermined']]
+        r = 10 ** b['y_hi'].to_numpy() / g610.THRESH[t]
+        w = b['post_exceed'].to_numpy()
+        order = np.argsort(r)
+        ratio, cum = r[order], np.concatenate([[0], np.cumsum(w[order])]) / w.sum()
+        index = np.searchsorted(ratio, k, side='right')
+        out[t] = (k, index / len(ratio), cum[index])
+    return out
+
+
+RESOLUTION = _resolution()
+
+
+def resolution_curve(fig, ss):
+    ax = fig.add_subplot(ss)
+    for t in METALS:
+        k, events, hidden = RESOLUTION[t]
+        ax.plot(k, events * 100, color=TCOL[t], lw=2.2)
+        ax.plot(k, hidden * 100, color=TCOL[t], lw=1.7, ls=':')
+        i = np.searchsorted(k, 5)
+        ax.scatter([k[i]], [events[i] * 100], marker=TMARK[t], s=50, color=TCOL[t], ec=INK, lw=.65, zorder=3)
+    ax.set_xscale('log')
+    ax.xaxis.set_major_locator(FixedLocator([1, 2, 5, 10, 20, 50, 100]))
+    ax.xaxis.set_minor_locator(NullLocator())
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f'{v:g}'))
+    ax.set(xlim=(1, 200), ylim=(0, 102))
+    style(ax, 'Reporting-limit reduction (fold)', 'Blind spot resolved (%)')
+    handles = g610.metal_keys() + [Line2D([], [], color=INK, lw=2.0, label='Events'),
+                                  Line2D([], [], color=INK, lw=1.5, ls=':', label='Hidden exceedances')]
+    ax.legend(handles=handles, loc='lower right', fontsize=11.2, frameon=False, ncol=1, handlelength=1.6)
 
 
 WT_ORDER = ['River', 'Lake', 'Reservoir', 'Wetland', 'Groundwater']
@@ -330,16 +463,16 @@ WT['yield'] = WT['expected'] / WT['uncertain']
 
 def water_type_yield(fig, ss):
     ax = fig.add_subplot(ss)
-    w = .25
+    w = .26
     for j, t in enumerate(METALS):
         g = WT[WT.target.eq(t)].set_index('wtype').reindex(WT_ORDER)
-        x = np.arange(len(WT_ORDER)) + (j - 1) * w
-        ax.bar(x, g['yield'] * 100, width=w * .9, color=TCOL[t], ec=INK, lw=.65, label=t)
-    ax.set_xticks(range(len(WT_ORDER)), WT_ORDER)
-    ax.set_ylim(0, 24)
-    style(ax, None, 'Expected hidden exceedances\nper uncertain event (%)')
-    ax.tick_params(axis='x', labelsize=12)
-    ax.legend(loc='upper right', ncol=3, fontsize=12, frameon=False, handlelength=1.0, columnspacing=.8)
+        y = np.arange(len(WT_ORDER)) + (j - 1) * w
+        ax.barh(y, g['yield'] * 100, height=w * .9, color=TCOL[t], ec=INK, lw=.65, label=t)
+    ax.set_yticks(range(len(WT_ORDER)), WT_ORDER)
+    ax.set_ylim(len(WT_ORDER) - .45, -.6)
+    ax.set_xlim(0, 25)
+    style(ax, 'Expected hidden exceedances\nper uncertain event (%)', None)
+    ax.legend(loc='lower right', ncol=1, fontsize=12, frameon=False, handlelength=1.0)
 
 
 def align_priority_rows(fig, groups):
@@ -350,9 +483,9 @@ def align_priority_rows(fig, groups):
 
 
 def layout6(fig):
-    g = fig.add_gridspec(3, 20, height_ratios=[4.55, 5.9, 4.35], left=.02, right=.98, bottom=.012, top=.985,
-                         hspace=.085, wspace=.55)
-    return dict(a=g[0, :], b=g[1, :13], c=g[1, 13:], d=g[2, :10], e=g[2, 10:])
+    g = fig.add_gridspec(3, 21, height_ratios=[4.55, 5.9, 4.5], left=.02, right=.98, bottom=.012, top=.985,
+                         hspace=.085, wspace=.6)
+    return dict(a=g[0, :], b=g[1, :13], c=g[1, 13:], d=g[2, :7], e=g[2, 7:14], f=g[2, 14:])
 
 
 # ------------------------------------------------------------------ specifications
@@ -374,18 +507,18 @@ SPEC = {
                   'f': (6.6, 4.6), 'g': (6.6, 4.6)}),
     4: dict(stem='Fig04_reporting_rules', layout=layout4, size=(WIDTH, 15.4), exempt=(),
             panels=[('a', g610.rule_prevalence), ('b', annual_compliance), ('c', g610.prevalence_ratio),
-                    ('d', g610.prevalence_maps), ('e', g610.bound_frontier), ('f', g610.country_transfer('cindex')),
+                    ('d', country_prevalence_gap), ('e', g610.bound_frontier), ('f', g610.country_transfer('cindex')),
                     ('g', g610.country_transfer('cov_lower'))],
-            subs={'a': (9.5, 6.3), 'b': (7.4, 4.6), 'c': (6.5, 5.0), 'd': (8.5, 4.3), 'e': (6.7, 5.0), 'f': (6.0, 4.9),
+            subs={'a': (9.5, 6.3), 'b': (7.4, 4.6), 'c': (6.5, 5.0), 'd': (7.4, 5.4), 'e': (6.7, 5.0), 'f': (6.0, 4.9),
                   'g': (6.0, 4.9)}),
-    5: dict(stem='Fig05_reporting_trends', layout=layout5, size=(WIDTH, 13.35), exempt=(),
-            panels=[('a', g610.trend_association), ('b', g610.trend_forest), ('c', limit_histories),
-                    ('d', g610.trend_cases), ('e', g610.year_removal)],
-            subs={'a': (6.3, 4.9), 'b': (9.0, 5.2), 'c': (13.2, 3.1), 'd': (11.0, 4.4), 'e': (6.1, 4.9)}),
+    5: dict(stem='Fig05_reporting_trends', layout=layout5, size=(WIDTH, 13.2), exempt=(),
+            panels=[('a', trend_pairs), ('b', g610.trend_association), ('c', partial(g610.trend_forest, xlabel='Trend difference (pp per decade)')), ('d', limit_histories),
+                    ('e', g610.trend_cases), ('f', g610.year_removal)],
+            subs={'a': (6.0, 4.9), 'b': (6.3, 4.9), 'c': (7.0, 5.2), 'd': (13.2, 3.1), 'e': (11.0, 4.4), 'f': (6.1, 4.9)}),
     6: dict(stem='Fig06_measurement_priorities', layout=layout6, size=(WIDTH, 15.6), exempt=(), after=align_priority_rows,
             panels=[('a', g610.followup_maps), ('b', g610.followup_triage), ('c', country_volume),
-                    ('d', priority_capture), ('e', water_type_yield)],
-            subs={'a': (9.2, 4.7), 'b': (7.5, 6.5), 'c': (7.6, 6.5), 'd': (6.2, 5.0), 'e': (6.4, 4.6)}),
+                    ('d', priority_capture), ('e', water_type_yield), ('f', resolution_curve)],
+            subs={'a': (9.2, 4.7), 'b': (7.5, 6.5), 'c': (7.6, 6.5), 'd': (6.2, 5.0), 'e': (6.2, 4.8), 'f': (6.2, 5.0)}),
 }
 
 

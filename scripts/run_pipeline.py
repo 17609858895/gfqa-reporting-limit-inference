@@ -39,7 +39,7 @@ STAGES = {
         ('s18_annual_compliance.py', '--ci'),
     ],
     'summaries': [('s10_summarize.py',), ('assemble_figure_inputs.py',)],
-    'figures': [('generate_six_main_figures.py',)],
+    'figures': [('generate_six_main_figures.py',), ('generate_toc_graphic.py',)],
 }
 
 

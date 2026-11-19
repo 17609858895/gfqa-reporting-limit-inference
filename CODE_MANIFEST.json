@@ -28,8 +28,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 8500,
-      "sha256": "80d9c99fc7370ac468a327f966bbd9dca51a21d866cb6fc26920eca5e160cf05"
+      "bytes": 8861,
+      "sha256": "a70de7874371e8d016e37594ce1c57df15ccbccf83aa09da5b1e82ab370487a2"
     },
     {
       "path": "requirements-analysis.txt",
@@ -73,13 +73,18 @@
     },
     {
       "path": "scripts/generate_main_figures_06_10.py",
-      "bytes": 26845,
-      "sha256": "f34df72d0f3cc32f0264062475eff4044db202cde29ce7c82a4df7ed2caf0cb2"
+      "bytes": 26936,
+      "sha256": "1c033405cec47ee9c5f12e8d4800ee681aab26f5c06155597632002fd4313e8f"
     },
     {
       "path": "scripts/generate_six_main_figures.py",
-      "bytes": 21882,
-      "sha256": "8175ce557f0fddedfac8d6075190132ad5d2ad0bac87c8a07b79110ec2fff775"
+      "bytes": 28856,
+      "sha256": "d713cddb2655f0916ecb0b9c5c849e9d97cec549d4c5b9df0a7b7c6fc2c3a572"
+    },
+    {
+      "path": "scripts/generate_toc_graphic.py",
+      "bytes": 4807,
+      "sha256": "1a320f0ee79d1f9c5e687ca7e5b6c2815efa55f913f228cd089de1bf67147f30"
     },
     {
       "path": "scripts/learners.py",
@@ -108,8 +113,8 @@
     },
     {
       "path": "scripts/run_pipeline.py",
-      "bytes": 4115,
-      "sha256": "459f4808dbb7f4ff3b07d997a3347d0886f20e5e1a62ed313b782e9dbea705c8"
+      "bytes": 4145,
+      "sha256": "8fd2e759a1f52b0f21333ed78daf6e82a3b06d7d77dd22dbcb86f15c6f652099"
     },
     {
       "path": "scripts/s00_prepare_inputs.py",
@@ -228,8 +233,8 @@
     },
     {
       "path": "SOURCE_ADAPTATIONS.md",
-      "bytes": 2435,
-      "sha256": "aafffe6a8d1bc49d0566305dc0cd8f1a132bc704f5208b9c7e10ad898eb3879a"
+      "bytes": 2588,
+      "sha256": "69dda6eacfbb4f5bbd96f10871628aaac968de16160e46590e90497e468796bb"
     },
     {
       "path": "summary_equivalence.json",
@@ -238,8 +243,8 @@
     },
     {
       "path": "VALIDATION.md",
-      "bytes": 3894,
-      "sha256": "baa16fb993e0b003d01894187b2fe5eb882774270df3be22b444d4f5ed206e6c"
+      "bytes": 4743,
+      "sha256": "ce1ed95ec2014c6386ef3c9ac83b75618d5443eeeb2dbe3f39c144a37dd371a7"
     }
   ]
 }

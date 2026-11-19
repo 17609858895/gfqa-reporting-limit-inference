@@ -306,7 +306,8 @@ def trend_association(fig,ss):
                     fmt=TMARK[t],color=TCOL[t],mec=INK,mew=.6,ms=7.6,elinewidth=1,ecolor=MUTED,label=t,zorder=3)
     ax.axhline(0,color=INK,lw=.85);ax.axvline(0,color=INK,lw=.85)
     correlation=np.corrcoef(MAIN.r_und,MAIN.artefact)[0,1]
-    ax.text(.97,.04,f'r = {correlation:.2f}, n = {len(MAIN)}',transform=ax.transAxes,ha='right',fontsize=12,color=INK)
+    ax.text(.97,.04,f'r = {correlation:.2f}, n = {len(MAIN)}',transform=ax.transAxes,ha='right',fontsize=12,color=INK,
+            bbox=dict(facecolor='white',edgecolor='none',pad=1.5),zorder=4)
     positions={('Cd','France'):(-86,-60,'left'),('Cd','Italy'):(-48,-45,'left'),
                ('Hg','France'):(-70,-17,'left'),('Hg','Italy'):(5,-17,'left'),
                ('Cd','Belgium'):(4,16,'left'),('Hg','Mexico'):(29,29,'right'),
@@ -363,7 +364,7 @@ def trend_cases(fig,ss):
                   borderaxespad=0)
 
 
-def trend_forest(fig,ss):
+def trend_forest(fig,ss,xlabel='Half-limit minus model trend (pp per decade)'):
     ax=fig.add_subplot(ss)
     g=MAIN.assign(label=MAIN.target+' '+MAIN.country.map(SHORT)).sort_values('artefact')
     g=g[((g.artefact_lo>0)|(g.artefact_hi<0))&g.artefact.abs().ge(2)]
@@ -372,7 +373,7 @@ def trend_forest(fig,ss):
         ax.errorbar(r.artefact,i,xerr=[[r.artefact-r.artefact_lo],[r.artefact_hi-r.artefact]],fmt=TMARK[r.target],
                     color=TCOL[r.target],mec=INK,mew=.6,ms=7.3,ecolor=INK,elinewidth=.9)
     ax.axvline(0,color=INK,lw=.9);ax.set_yticks(y,g.label)
-    style(ax,'Half-limit minus model trend (pp per decade)',None)
+    style(ax,xlabel,None)
 
 
 def year_removal(fig,ss):

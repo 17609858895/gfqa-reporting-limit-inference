@@ -1,5 +1,11 @@
 # Release preparation checks
 
+## v1.2.0 (19 November 2026)
+
+- Synchronised `generate_six_main_figures.py` and `generate_main_figures_06_10.py` with the manuscript figures and added `generate_toc_graphic.py`. Release-only differences remain the documented portability changes listed in `SOURCE_ADAPTATIONS.md`.
+- Static checks passed (AST parsing, in-memory compilation, closed import graph, inventory hashes, and scans for credentials, email addresses and user-specific paths). Executed from this release copy against the existing analytical outputs (linked locally, not included), the figure stage was compared pixel by pixel with the manuscript figures, panels and table-of-contents graphic; the result is recorded below.
+- Result: all 6 combined figures, 39 independent panels and the table-of-contents graphic (46 PNG files) were pixel-identical to the manuscript versions.
+
 ## v1.1.0 (14 November 2026)
 
 - The plotting source was synchronised with the six-figure manuscript and `s18_annual_compliance.py` was added. Only the documented portability changes differ from the working copies: local helper imports, `inputs/basemap/`, `figures/qa/` and `assets/monitoring_vignette.png` paths, and neutral module docstrings.
