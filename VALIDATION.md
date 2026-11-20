@@ -1,5 +1,11 @@
 # Release preparation checks
 
+## v1.3.0 (20 November 2026)
+
+- Added `s19_interpretive_diagnostics.py`, an unchanged copy of the working script, and listed it at the end of the sensitivity stage of the serial runner (33 commands in plan mode).
+- Static checks passed (AST parsing, in-memory compilation, closed import graph, inventory hashes, and scans for credentials, email addresses and user-specific paths). The numerical utility checks in `smoke_checks.py` also passed.
+- Executed from this release copy against the existing crossfit and benchmark test predictions (copied locally, not included), `s19` reproduced the 312-row diagnostics table used for the manuscript byte for byte. No learner was refitted, and the other stages were not rerun for this release.
+
 ## v1.2.0 (19 November 2026)
 
 - Synchronised `generate_six_main_figures.py` and `generate_main_figures_06_10.py` with the manuscript figures and added `generate_toc_graphic.py`. Release-only differences remain the documented portability changes listed in `SOURCE_ADAPTATIONS.md`.

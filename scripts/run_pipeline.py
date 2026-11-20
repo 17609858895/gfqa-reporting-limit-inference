@@ -37,6 +37,7 @@ STAGES = {
         ('s16_retest_priority.py',),
         ('s18_annual_compliance.py',),
         ('s18_annual_compliance.py', '--ci'),
+        ('s19_interpretive_diagnostics.py',),
     ],
     'summaries': [('s10_summarize.py',), ('assemble_figure_inputs.py',)],
     'figures': [('generate_six_main_figures.py',), ('generate_toc_graphic.py',)],

@@ -2,7 +2,7 @@
 
 Code accompanying **Reporting limits reshape chemical exceedance estimates and trends in a global freshwater archive**.
 
-The analysis links reported concentration intervals to event-level threshold screening, station-year annual-mean screening, station-grouped model comparisons, conditional exceedance probabilities, paired within-station trends and follow-up measurement priorities. The repository contains analysis and plotting source, with one original monitoring vignette used by the workflow panel. Monitoring data, predictions, fitted models, result tables and manuscript files are not included.
+The analysis links reported concentration intervals to event-level threshold screening, station-year annual-mean screening, station-grouped model comparisons, conditional exceedance probabilities, paired within-station trends, follow-up measurement priorities and diagnostics for interpreting differences between reporting rules. The repository contains analysis and plotting source, with one original monitoring vignette used by the workflow panel. Monitoring data, predictions, fitted models, result tables and manuscript files are not included.
 
 ## Data
 
@@ -64,10 +64,11 @@ The original analyst script names and output columns are retained. Historical na
 | `s15`, `s17` | Distributional and reported-limit relabelling sensitivity |
 | `s16` | Country and station follow-up measurement priorities |
 | `s18` | Station-year annual-mean screening: half-limit means, interval bounds, censored-model means, exceedance probabilities and station-bootstrap intervals (`--ci`) |
+| `s19` | Diagnostics for interpretation from existing crossfit and benchmark test predictions, without refitting: reporting-limit variance components, blind-spot composition by period, sampling intensity, measured values beneath blind-spot limits, expected concentrations of blind-spot non-detects, bands of reporting limit relative to threshold, lower-tail support, held-out predictions against reporting limits and station-ranking dispersion |
 | `generate_six_main_figures`, `method_workflow` and panel modules | Six current figures (one per Results section) and independent PNG/PDF panel exports |
 | `generate_toc_graphic` | Table-of-contents graphic at final size (PNG, PDF and TIFF) |
 
-Archive profile plots use all available target dates. Modelling and prevalence use events from 1980 onward. In `s16`, country-level triage and reporting-limit reductions use the full modelling period; station rankings use uncertain blind-spot events from 2015 onward. Expected hidden-exceedance counts are sums of conditional probabilities. In `s18`, station-years need at least four events; non-detects enter half-limit means at D/2, interval bounds at zero or D, and the censored-model mean at their truncated predictive expectation, and 200 joint draws give the probability that an annual mean exceeds its threshold. The conformal outputs report interval-identified empirical coverage bounds; dependence within stations and the crossfit construction constrain their interpretation.
+Archive profile plots use all available target dates. Modelling and prevalence use events from 1980 onward. In `s16`, country-level triage and reporting-limit reductions use the full modelling period; station rankings use uncertain blind-spot events from 2015 onward. Expected hidden-exceedance counts are sums of conditional probabilities. In `s18`, station-years need at least four events; non-detects enter half-limit means at D/2, interval bounds at zero or D, and the censored-model mean at their truncated predictive expectation, and 200 joint draws give the probability that an annual mean exceeds its threshold. In `s19`, detected values are re-censored at blind-spot limits drawn from their own country with the same seeded draw as `s11`, station ranking uses uncertain blind-spot events from 2015 onward as in `s16`, and all quantities are written in long format to `tables/T_interpretive_diagnostics.csv`. The conformal outputs report interval-identified empirical coverage bounds; dependence within stations and the crossfit construction constrain their interpretation.
 
 ## Outputs and logs
 
@@ -77,6 +78,7 @@ Scripts create local `data_processed/`, `results/`, `tables/` and `figures/` fol
 
 ## Versions
 
+- `v1.3.0`: diagnostics for interpretation (`s19`), run at the end of the sensitivity stage.
 - `v1.2.0`: country-by-contaminant prevalence-gap matrix, paired half-limit and model trend panel, random-ranking baseline and reporting-limit resolution curves for follow-up priorities, and the table-of-contents graphic.
 - `v1.1.0`: six consolidated figures, the station-year annual-mean analysis (`s18`) and the current plotting source. The ten-figure entry points were retired; their panel builders are retained.
 - `v1.0.0`: initial release with ten figures.
